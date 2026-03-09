@@ -14,7 +14,7 @@ uses
   LazUtf8,
   Classes, SysUtils, DOM, XMLRead, 
   CLI.Interfaces, CLI.Application, CLI.Command, CLI.Parameter, CLI.Progress, CLI.Console,
-  uCompareAssoc, uCompareGeneral, uCompareColors, uComparePlugins, 
+  uCompareAssoc, uCompareGeneral, uCompareColors, uComparePlugins, uComparePanelModes,
   uDropSections, uPluginList, uKeepSections;
 
 const
@@ -60,6 +60,7 @@ begin
     'generalconfig' : CompareGeneral(xmlFile1, xmlFile2, OutputFile);
     'colors' : CompareColors(xmlFile1, xmlFile2, OutputFile);
     'pluginsconfig' : ComparePlugins(xmlFile1, xmlFile2, OutputFile);
+    'panelmodes' : ComparePanelModes(xmlFile1, xmlFile2, OutputFile);
   else
   end;
 end;
@@ -131,7 +132,7 @@ begin
       AddPathParameter('-1', '--old', 'Путь к старому файлу экспорта', True);
       AddPathParameter('-2', '--new', 'Путь к новому файлу экспорта', True);
       AddPathParameter('-o', '--output', 'Путь к результирующему файлу. По умолчанию - (stdout)', False, '-');
-      AddEnumParameter('-s', '--section', 'Раздел для сравнения', 'associations|generalconfig|colors|pluginsconfig', False, 'associations');
+      AddEnumParameter('-s', '--section', 'Раздел для сравнения', 'associations|generalconfig|colors|pluginsconfig|panelmodes', False, 'associations');
     end;
     App.RegisterCommand(CompareCmd);
 

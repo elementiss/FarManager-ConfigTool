@@ -84,23 +84,25 @@ end;
 
 procedure ChangedReport(BaseRoot: TDOMNode; S: TDOMElement; var f: TextFile);
 var
-  guid: DOMString;
   Found: TDOMElement;
+  guid: DOMString;
+  desc, newdesc: DOMString;
 begin
   guid := S.GetAttribute('guid');
   if guid = '' then
     writeln(StdErr, 'Не найден GUID плагина');
+  desc := GetDesc(S);
 
   Found := FindSetting(BaseRoot, guid);
 
   if Found = nil then begin
-    Writeln(f, Format('ADDED: %s - %s', [guid, GetDesc(S)]));
+    Writeln(f, Format('ADDED: %s - %s', [guid, desc]));
   end else begin
-  // если найден можно сравнить описание и даже настройки
-//     if (flags <> flags2) or (foreground <> foreground2) or (background <> background2) then begin
-//       Writeln(f, Format('CHANGED: %s: %s → %s, %s → %s, %s → %s', [SettingName, 
-//         foreground, foreground2, background, background2, flags, flags2]));
-//     end;
+    // если найден можно сравнить описание и даже настройки
+    newdesc := GetDesc(Found);
+    if desc <> newdesc then begin
+      Writeln(f, Format('CHANGED: %s: %s → %s', [guid, desc, newdesc]));
+    end;
   end;
 end;
 
