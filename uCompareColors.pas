@@ -40,6 +40,7 @@ var
   Current: TDOMNode;
 begin
   Result := nil;
+  if Root = Nil then exit;
   Current := Root.FirstChild;
   while Assigned(Current) do begin
     if (Current.NodeType = ELEMENT_NODE) and (Current.NodeName = 'object') then

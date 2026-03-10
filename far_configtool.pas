@@ -16,7 +16,7 @@ uses
   Classes, SysUtils, DOM, XMLRead, 
   CLI.Interfaces, CLI.Application, CLI.Command, CLI.Parameter, CLI.Progress, CLI.Console,
   uCompareAssoc, uCompareGeneral, uCompareColors, uComparePlugins, uComparePanelModes,
-  uDropSections, uPluginList, uKeepSections;
+  uCompareShortcuts, uDropSections, uPluginList, uKeepSections;
 
 const
   APP_NAME    = 'far_configtool';
@@ -62,6 +62,7 @@ begin
     'colors' : CompareColors(xmlFile1, xmlFile2, OutputFile);
     'pluginsconfig' : ComparePlugins(xmlFile1, xmlFile2, OutputFile);
     'panelmodes' : ComparePanelModes(xmlFile1, xmlFile2, OutputFile);
+    'shortcuts' : CompareShortcuts(xmlFile1, xmlFile2, OutputFile);
   else
   end;
 end;
@@ -127,13 +128,13 @@ begin
     // todo сравнение других опций
     CompareCmd := TCompareCommand.Create('compare', 'Сравнивает файлы экспорта Far Manager, созданные командой `far /export file`.' + CR +
       '                 Выдает отчет по изменениям в указанном разделе: добавлено / удалено / изменено' + CR +
-      '                 Поддерживаются разделы: ассоциации файлов, общие настройки, цвета, список плагинов' + CR +
+      '                 Поддерживаются разделы: ассоциации файлов, общие настройки, цвета, список плагинов, закладки, режимы панелей' + CR +
       '                 Пример: `compare -s associations --old settings.farconfig --new new.farconfig`');
     with CompareCmd do begin
       AddPathParameter('-1', '--old', 'Путь к старому файлу экспорта', True);
       AddPathParameter('-2', '--new', 'Путь к новому файлу экспорта', True);
       AddPathParameter('-o', '--output', 'Путь к результирующему файлу. По умолчанию - (stdout)', False, '-');
-      AddEnumParameter('-s', '--section', 'Раздел для сравнения', 'associations|generalconfig|colors|pluginsconfig|panelmodes', False, 'associations');
+      AddEnumParameter('-s', '--section', 'Раздел для сравнения', 'associations|generalconfig|colors|pluginsconfig|panelmodes|shortcuts', False, 'associations');
     end;
     App.RegisterCommand(CompareCmd);
 
