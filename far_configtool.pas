@@ -1,13 +1,14 @@
 program far_configtool;
 
 {$mode objfpc}{$H+}
-{$modeswitch ANONYMOUSFUNCTIONS+}
 {$codepage utf8}
 
 { 
   Планируется :
     merge   base.farconfig patch.farconfig [output.farconfig]
-    сравнить highlight
+    сравнить highlight  
+      filters
+      shortcuts
 }
 
 uses

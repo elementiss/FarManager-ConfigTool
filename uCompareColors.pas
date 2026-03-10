@@ -98,7 +98,6 @@ procedure CompareColors(const FileBase, FileNew, OutputFile: string);
 var
   BaseDoc, NewDoc: TXMLDocument;
   BaseRoot, NewRoot: TDOMNode;
-  FT, Found: TDOMNode;
   f: TextFile;
 begin
   try

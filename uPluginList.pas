@@ -7,7 +7,7 @@
 interface
 
 uses
-  Classes, SysUtils, DOM, XMLRead, XMLWrite;
+  Classes, SysUtils, DOM, XMLRead;
 
 procedure ShowPluginList(const InputFile: string; const OutputFile: string);
 

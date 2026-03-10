@@ -40,6 +40,8 @@ procedure ComparePanelModes(const FileBase, FileNew, OutputFile: string);
 
 implementation
 
+const CR = #13#10;
+
 type
   TSettingProc = procedure(NewRoot: TDOMNode; S: TDOMElement; var f: TextFile);
 
@@ -83,7 +85,7 @@ begin
   while Assigned(Current) do begin
     if (Current.NodeType = ELEMENT_NODE) and (Current.NodeName = 'value') then 
       with TDOMElement(Current) do begin
-        Result := Result + '   ' + GetAttribute('name') + '=' + GetAttribute('value') + #13#10;
+        Result := Result + '   ' + GetAttribute('name') + '=' + GetAttribute('value') + CR;
       end;
     Current := Current.NextSibling;
   end;
@@ -107,7 +109,7 @@ procedure ChangedReport(BaseRoot: TDOMNode; S: TDOMElement; var f: TextFile);
 var
   Found: TDOMElement;
   name: DOMString;
-  desc, newdesc: DOMString;
+  desc, olddesc: DOMString;
 begin
   name := S.GetAttribute('name');
   desc := GetDesc(S);
@@ -117,9 +119,9 @@ begin
   if Found = nil then begin
     Writeln(f, Format('ADDED: %s'#13#10'%s', [name, desc]));
   end else begin   // если найден
-    newdesc := GetDesc(Found);
-    if desc <> newdesc then begin
-      Writeln(f, Format('CHANGED: %s'#13#10'%s  ->'#13#10'%s', [name, desc, newdesc]));
+    olddesc := GetDesc(Found);
+    if desc <> olddesc then begin
+      Writeln(f, Format('CHANGED: %s'#13#10'%s  ->'#13#10'%s', [name, olddesc, desc]));
     end;
   end;
 end;
@@ -128,7 +130,6 @@ procedure ComparePanelModes(const FileBase, FileNew, OutputFile: string);
 var
   BaseDoc, NewDoc: TXMLDocument;
   BaseRoot, NewRoot: TDOMNode;
-  FT, Found: TDOMNode;
   f: TextFile;
 begin
   try
@@ -177,20 +178,23 @@ begin
   IterateSettings(NewRoot, BaseRoot, f, @DeletedReport);
 
   // кастомные 
-  BaseRoot := BaseRoot.FindNode('CustomModes');
-  NewRoot := NewRoot.FindNode('CustomModes');
-  if not Assigned(BaseRoot) or not Assigned(NewRoot) then begin
-  writeln('!!!!!!!!!!!!!');
-  end
-  else begin
+  WriteLn('=== CustomModes ===' + CR);
+
+  BaseRoot := FindSetting(BaseRoot, 'CustomModes');
+  NewRoot := FindSetting(NewRoot, 'CustomModes');
+  if Assigned(BaseRoot) and Assigned(NewRoot) then begin // есть кастомные в обоих
     IterateSettings(BaseRoot, NewRoot, f, @ChangedReport);
     IterateSettings(NewRoot, BaseRoot, f, @DeletedReport);
+  end
+  else if not Assigned(BaseRoot) or not Assigned(NewRoot) then begin
+    writeln('!!!!!!!!!!!!!');
   end;
 
   CloseFile(f);
 
   BaseDoc.Free;
   NewDoc.Free;
+
 end;
 
 end.
