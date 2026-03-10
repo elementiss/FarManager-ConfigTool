@@ -12,10 +12,13 @@
 #Linux64/
 
 data/
+backup/
+lib/
 *.exe
 *.dll
 *.bpl
 *.bpi
+*.dbg
 *.dcp
 *.so
 *.apk

@@ -1,8 +1,8 @@
-﻿unit uCompareGeneral;       
+﻿unit uCompareGeneral;
 
 {$mode objfpc}
 {$codepage utf8}
-{$H+} 
+{$H+}
 
 { Сравнение общих настроек 
   Уникальным ключом является тройка key-name-type
@@ -13,13 +13,12 @@ interface
 uses
   Classes, SysUtils, DOM, XMLRead;
 
-
 procedure CompareGeneral(const FileBase, FileNew, OutputFile: string);
 
 implementation
 
 type
-  TSettingProc = procedure(NewRoot, S: TDOMNode; var f: TextFile);
+  TSettingProc = procedure(NewRoot: TDOMNode; S: TDOMElement; var f: TextFile);
 
 procedure IterateSettings(Root, Node: TDOMNode; var f: TextFile; Proc: TSettingProc);
 var
@@ -29,8 +28,8 @@ begin
 
   Current := Node.FirstChild;
   while Assigned(Current) do begin
-    if (Current.NodeType = ELEMENT_NODE) and (Current.NodeName = 'setting') then 
-      Proc(Root, Current, f);
+    if (Current.NodeType = ELEMENT_NODE) and (Current.NodeName = 'setting') then
+      Proc(Root, TDOMElement(Current), f);
     Current := Current.NextSibling;
   end;
 end;
@@ -40,30 +39,31 @@ var
   Current: TDOMNode;
 begin
   Result := nil;
-  if Root = Nil then exit;
+  if Root = nil then exit;
+
   Current := Root.FirstChild;
   while Assigned(Current) do begin
     if (Current.NodeType = ELEMENT_NODE) and (Current.NodeName = 'setting') then
-      if (TDOMElement(Current).GetAttribute('key') = SettingKey) and
-         (TDOMElement(Current).GetAttribute('name') = SettingName) and
-         (TDOMElement(Current).GetAttribute('type') = SettingType) then
-      begin
-        Result := Current;
-        Exit;
-      end;
+      with TDOMElement(Current) do
+        if (GetAttribute('key') = SettingKey) and
+           (GetAttribute('name') = SettingName) and
+           (GetAttribute('type') = SettingType) then begin
+          Result := Current;
+          Exit;
+        end;
     Current := Current.NextSibling;
   end;
 end;
 
-procedure DeletedReport(Root, S: TDOMNode; var f: TextFile);
+procedure DeletedReport(Root: TDOMNode; S: TDOMElement; var f: TextFile);
 var
   SettingKey, SettingName, SettingType, SettingValue: DOMString;
   Found: TDOMNode;
 begin
-  SettingKey := TDOMElement(S).GetAttribute('key');
-  SettingName := TDOMElement(S).GetAttribute('name');
-  SettingType := TDOMElement(S).GetAttribute('type');
-  SettingValue := TDOMElement(S).GetAttribute('value');
+  SettingKey   := S.GetAttribute('key');
+  SettingName  := S.GetAttribute('name');
+  SettingType  := S.GetAttribute('type');
+  SettingValue := S.GetAttribute('value');
 
   Found := FindSetting(Root, SettingKey, SettingName, SettingType);
 
@@ -72,21 +72,22 @@ begin
   end;
 end;
 
-procedure ChangedReport(BaseRoot, S: TDOMNode; var f: TextFile);
+procedure ChangedReport(BaseRoot: TDOMNode; S: TDOMElement; var f: TextFile);
 var
   SettingKey, SettingName, SettingType, SettingValue, Value: DOMString;
   Found: TDOMNode;
 begin
-  SettingKey := TDOMElement(S).GetAttribute('key');
-  SettingName := TDOMElement(S).GetAttribute('name');
-  SettingType := TDOMElement(S).GetAttribute('type');
-  SettingValue := TDOMElement(S).GetAttribute('value');
+  SettingKey   := S.GetAttribute('key');
+  SettingName  := S.GetAttribute('name');
+  SettingType  := S.GetAttribute('type');
+  SettingValue := S.GetAttribute('value');
 
   Found := FindSetting(BaseRoot, SettingKey, SettingName, SettingType);
 
   if Found = nil then begin
     Writeln(f, Format('ADDED: %s.%s: %s: %s', [SettingKey, SettingName, SettingType, SettingValue]));
-  end else begin
+  end
+  else begin
     Value := TDOMElement(Found).GetAttribute('value');
     if Value <> SettingValue then begin
       Writeln(f, Format('CHANGED: %s.%s: %s: %s → %s', [SettingKey, SettingName, SettingType, Value, SettingValue]));
@@ -110,36 +111,36 @@ begin
     end;
   end;
 
-  BaseRoot := BaseDoc.DocumentElement.FindNode('generalconfig');
-  NewRoot := NewDoc.DocumentElement.FindNode('generalconfig');
+  try
+    BaseRoot := BaseDoc.DocumentElement.FindNode('generalconfig');
+    NewRoot  := NewDoc.DocumentElement.FindNode('generalconfig');
 
-  if not Assigned(BaseRoot) or not Assigned(NewRoot) then begin
-    Writeln(StdErr, 'Не найден узел <generalconfig> в одном из файлов');
+    if not Assigned(BaseRoot) or not Assigned(NewRoot) then begin
+      Writeln(StdErr, 'Не найден узел <generalconfig> в одном из файлов');
+      Halt(3);
+    end;
+
+    if OutputFile = '-' then
+      f := Output
+    else begin
+      AssignFile(f, OutputFile);
+      Rewrite(f);
+    end;
+
+    Writeln(f, 'Сравнение: ', ExtractFileName(FileBase), ' → ', ExtractFileName(FileNew));
+    Writeln(f, '---------------------------------------------------');
+
+    // Добавленные и измененные
+    IterateSettings(BaseRoot, NewRoot, f, @ChangedReport);
+
+    // Удаленные
+    IterateSettings(NewRoot, BaseRoot, f, @DeletedReport);
+
+    CloseFile(f);   // FPC защищает стандартные потоки от реального закрытия
+  finally
     BaseDoc.Free;
     NewDoc.Free;
-    Halt(3);
   end;
-
-  if OutputFile = '-' then
-     f := Output
-  else begin
-    AssignFile(f, OutputFile);
-    Rewrite(f);
-  end;
-
-  Writeln(f, 'Сравнение: ', ExtractFileName(FileBase), ' → ', ExtractFileName(FileNew));
-  Writeln(f, '---------------------------------------------------');
-
-  // Добавленные и измененные
-  IterateSettings(BaseRoot, NewRoot, f, @ChangedReport);
-
-  // Удаленные 
-  IterateSettings(NewRoot, BaseRoot, f, @DeletedReport);
-
-  CloseFile(f);
-
-  BaseDoc.Free;
-  NewDoc.Free;
 end;
 
 end.
