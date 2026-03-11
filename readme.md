@@ -2,7 +2,12 @@
 
 A tool for manipulation FarManager settings export-import files
 
-[![](https://img.shields.io/github/release/elementiss/FarManager-ConfigTool.svg?label=current+release)]()  [![Github All Releases](https://img.shields.io/github/downloads/elementiss/FarManager-ConfigTool/total.svg)]()
+[![](https://img.shields.io/github/release/elementiss/FarManager-ConfigTool.svg?label=current+release)]()
+
+[![](https://img.shields.io/github/release/elementiss/FarManager-ConfigTool.svg?label=current+release&style=plastic)]()
+
+[![](https://img.shields.io/github/release/elementiss/FarManager-ConfigTool.svg?label=current+release&style=for-the-badge)]() [![Github All Releases](https://img.shields.io/github/downloads/elementiss/FarManager-ConfigTool/total.svg?style=for-the-badge)]()
+
 
 Far manager позволяет экспортировать настройки в xml-файл с помощью команды `far.exe /export settings.farconfig` и затем импортировать с помощью команды `far.exe /import settings.farconfig`. [Обсуждение](https://forum.farmanager.com/viewtopic.php?t=7009)
 
