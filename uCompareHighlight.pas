@@ -206,7 +206,7 @@ begin
     Rewrite(f);
   end;
 
-  Writeln(f, 'Сравнение: ', ExtractFileName(FileBase), ' → ', ExtractFileName(FileNew));
+  Writeln(f, 'Сравнение highlight: ', ExtractFileName(FileBase), ' → ', ExtractFileName(FileNew));
   Writeln(f, '---------------------------------------------------');
 
   // Спуск к ветке с закладками <key name="Highlight"> 

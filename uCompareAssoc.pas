@@ -7,6 +7,19 @@
   Пара mask-description уникальным ключом не являтся - технически можно создать две разные ассоциации 
   с одинаковыми масками и описанием. Но поскольку такие ассоциации будут показаны как неразличимые пункты меню,
   то в этом нет практического смысла. Поэтому программа считает ключом ассоциации пару mask-description
+  
+  Пример структуры
+    <associations>                                    // 0..5 = Enter, Ctrl+PgDn, F3, Alt+F3, F4, Alt+F4
+        <filetype mask="*.ps1" description="ps1">
+            <command type="0" enabled="1" command="powershell.exe -file !.!"/>
+            <command type="1" enabled="1" command=""/>
+            <command type="2" enabled="1" command=""/>
+            <command type="3" enabled="1" command=""/>
+            <command type="4" enabled="1" command=""/>
+            <command type="5" enabled="1" command=""/>
+        </filetype>
+    ...
+    </associations>
 }
 interface
 
@@ -18,22 +31,24 @@ procedure CompareAssociations(const FileBase, FileNew, OutputFile: string);
 
 implementation
 
-function FindFileType (Assoc: TDOMNode; const Mask, Desc: DOMString): TDOMNode;
+const SECTION = 'associations';
+
+function FindFileType (Assoc: TDOMNode; const Mask, Desc: DOMString): TDOMElement;
 var
-  N: TDOMNode;
+  Current: TDOMNode;
 begin
   Result := nil;
-  N := Assoc.FirstChild;
+  Current := Assoc.FirstChild;
 
-  while Assigned(N) do begin
-    if (N.NodeName = 'filetype') then
-      if (TDOMElement(N).GetAttribute('mask') = Mask) and
-        (TDOMElement(N).GetAttribute('description') = Desc) then
+  while Assigned(Current) do begin
+    if (Current.NodeType = ELEMENT_NODE) and (Current.NodeName = 'filetype') then
+      if (TDOMElement(Current).GetAttribute('mask') = Mask) and
+        (TDOMElement(Current).GetAttribute('description') = Desc) then
       begin
-        Result := N;
+        Result := TDOMElement(Current);
         exit;
       end;
-    N := N.NextSibling;
+    Current := Current.NextSibling;
   end;
 end;
 
@@ -45,8 +60,8 @@ begin
   C := FT.FirstChild;
 
   while Assigned(C) do begin
-    if C.NodeName = 'command' then begin
-      t := TDOMElement(C).GetAttribute('type');  // 0..5 = Enter, Ctrl+PgDn, F3, Alt+F3, F4, Alt+F4
+    if (C.NodeType = ELEMENT_NODE) and (C.NodeName = 'command') then begin
+      t := TDOMElement(C).GetAttribute('type');  
       cmd := TDOMElement(C).GetAttribute('command');
       enabled := TDOMElement(C).GetAttribute('enabled');
 
@@ -66,10 +81,12 @@ begin
   C := BaseFT.FirstChild;
 
   while Assigned(C) do begin
-    if C.NodeName = 'command' then begin
-      type_ := TDOMElement(C).GetAttribute('type');
-      basecmd := TDOMElement(C).GetAttribute('command');
-      enabled := TDOMElement(C).GetAttribute('enabled');
+    if (C.NodeType = ELEMENT_NODE) and (C.NodeName = 'command') then begin
+      with TDOMElement(C) do begin
+        type_ := GetAttribute('type');
+        basecmd := GetAttribute('command');
+        enabled := GetAttribute('enabled');
+      end;
 
       N := NewFT.FirstChild;
 
@@ -84,7 +101,7 @@ begin
             Writeln(f, Format(
               'CHANGED: %s | %s   command[%s]: %s:"%s" → %s:"%s"',
               [Mask, Desc, type_, enabled, basecmd, newenabled, newcmd]));
-          end;
+          end; // пустые новые команды не затирают существующие
           break;
         end;
         N := N.NextSibling;
@@ -112,71 +129,70 @@ begin
     end;
   end;
 
-  BaseAssoc := BaseDoc.DocumentElement.FindNode('associations');
-  NewAssoc := NewDoc.DocumentElement.FindNode('associations');
+  try
+    BaseAssoc := BaseDoc.DocumentElement.FindNode(SECTION);
+    NewAssoc := NewDoc.DocumentElement.FindNode(SECTION);
 
-  if not Assigned(BaseAssoc) or not Assigned(NewAssoc) then begin
-    Writeln(StdErr, 'Не найден узел <associations> в одном из файлов');
+    if not Assigned(BaseAssoc) or not Assigned(NewAssoc) then begin
+      Writeln(StdErr, Format('Не найден узел <%s> в одном из файлов', [SECTION]));
+      Halt(3);
+    end;
+
+    if OutputFile = '-' then
+      f := Output
+    else begin
+      AssignFile(f, OutputFile);
+      Rewrite(f);
+    end;
+
+    Writeln(f, 'Сравнение ', SECTION, ': ', ExtractFileName(FileBase), ' → ', ExtractFileName(FileNew));
+    Writeln(f, '---------------------------------------------------');
+
+    // Добавленные и измененные ассоциации
+    FT := NewAssoc.FirstChild;
+
+    while Assigned(FT) do begin
+      if FT.NodeName = 'filetype' then begin
+        Mask := TDOMElement(FT).GetAttribute('mask');
+        Desc := TDOMElement(FT).GetAttribute('description');
+
+        Found := FindFileType(BaseAssoc, Mask, Desc);
+
+        if Found = nil then begin
+          Writeln(f, 'ADDED: ', Mask, ' | ', Desc);
+          PrintCommands(FT, f);
+        end
+        else
+          CompareCommands(Found, FT, Mask, Desc, f);
+      end;
+
+      FT := FT.NextSibling;
+    end;
+
+    // Удаленные ассоциации
+    FT := BaseAssoc.FirstChild;
+
+    while Assigned(FT) do begin
+      if FT.NodeName = 'filetype' then begin
+        Mask := TDOMElement(FT).GetAttribute('mask');
+        Desc := TDOMElement(FT).GetAttribute('description');
+
+        Found := FindFileType(NewAssoc, Mask, Desc);
+
+        if Found = nil then begin
+          Writeln(f, 'DELETED: ', Mask, ' | ', Desc);
+          PrintCommands(FT, f);
+        end;
+      end;
+
+      FT := FT.NextSibling;
+    end;
+
+    CloseFile(f);
+  finally
     BaseDoc.Free;
     NewDoc.Free;
-    Halt(3);
   end;
-
-  if OutputFile = '-' then
-     f := Output
-  else begin
-    AssignFile(f, OutputFile);
-    Rewrite(f);
-  end;
-
-  Writeln(f, 'Сравнение: ', ExtractFileName(FileBase), ' → ', ExtractFileName(FileNew));
-  Writeln(f, '---------------------------------------------------');
-
-  // Добавленные и измененные ассоциации
-
-  FT := NewAssoc.FirstChild;
-
-  while Assigned(FT) do begin
-    if FT.NodeName = 'filetype' then begin
-      Mask := TDOMElement(FT).GetAttribute('mask');
-      Desc := TDOMElement(FT).GetAttribute('description');
-
-      Found := FindFileType(BaseAssoc, Mask, Desc);
-
-      if Found = nil then begin
-        Writeln(f, 'ADDED: ', Mask, ' | ', Desc);
-        PrintCommands(FT, f);
-      end
-      else
-        CompareCommands(Found, FT, Mask, Desc, f);
-    end;
-
-    FT := FT.NextSibling;
-  end;
-
-  // Удаленные ассоциации
-  FT := BaseAssoc.FirstChild;
-
-  while Assigned(FT) do begin
-    if FT.NodeName = 'filetype' then begin
-      Mask := TDOMElement(FT).GetAttribute('mask');
-      Desc := TDOMElement(FT).GetAttribute('description');
-
-      Found := FindFileType(NewAssoc, Mask, Desc);
-
-      if Found = nil then begin
-        Writeln(f, 'DELETED: ', Mask, ' | ', Desc);
-        PrintCommands(FT, f);
-      end;
-    end;
-
-    FT := FT.NextSibling;
-  end;
-
-  CloseFile(f);
-
-  BaseDoc.Free;
-  NewDoc.Free;
 end;
 
 end.

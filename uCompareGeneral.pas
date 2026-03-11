@@ -127,7 +127,7 @@ begin
       Rewrite(f);
     end;
 
-    Writeln(f, 'Сравнение: ', ExtractFileName(FileBase), ' → ', ExtractFileName(FileNew));
+    Writeln(f, 'Сравнение generalconfig: ', ExtractFileName(FileBase), ' → ', ExtractFileName(FileNew));
     Writeln(f, '---------------------------------------------------');
 
     // Добавленные и измененные
