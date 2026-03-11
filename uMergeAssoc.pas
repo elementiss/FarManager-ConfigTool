@@ -29,12 +29,12 @@ interface
 uses
   Classes, SysUtils, DOM, XMLRead, XMLWrite;
 
-procedure MergeAssoc (const BaseFile, PatchFile, OutputMergedFile: string);
+procedure MergeAssoc(const BaseDoc, PatchDoc: TXMLDocument);
 
 implementation
 
 { Поиск filetype по уникальному ключу (mask + description) }
-function FindFileType (Assoc: TDOMNode; const Mask, Desc: DOMString): TDOMElement;
+function FindFileType(Assoc: TDOMNode; const Mask, Desc: DOMString): TDOMElement;
 var
   Current: TDOMNode;
 begin
@@ -95,58 +95,45 @@ begin
   end;
 end;
 
-procedure MergeAssoc (const BaseFile, PatchFile, OutputMergedFile: string);
+procedure MergeAssoc(const BaseDoc, PatchDoc: TXMLDocument);
 var
-  BaseDoc, PatchDoc: TXMLDocument;
   BaseAssoc, PatchAssoc: TDOMNode;
   PatchFT, BaseFT: TDOMNode;
   Mask, Desc: DOMString;
 begin
-  try
-    ReadXMLFile(BaseDoc, BaseFile);
-    ReadXMLFile(PatchDoc, PatchFile);
-  except
-    on E: Exception do begin
-      Writeln(StdErr, 'Ошибка чтения XML: ', E.Message);
-      Halt(2);
-    end;
+  BaseAssoc := BaseDoc.DocumentElement.FindNode('associations');
+  if PatchDoc.DocumentElement.NodeName = 'associations' then
+    PatchAssoc := PatchDoc.DocumentElement      // уровень <farconfig> в файле патча можно опустить
+  else
+    PatchAssoc := PatchDoc.DocumentElement.FindNode('associations');
+
+  if not Assigned(PatchAssoc) then begin
+    // Writeln(StdErr, 'Не найден узел <associations> в патче');
+    Halt(3);
   end;
 
-  try
-    BaseAssoc := BaseDoc.DocumentElement.FindNode('associations');
-    if PatchDoc.DocumentElement.NodeName = 'associations' then
-      PatchAssoc := PatchDoc.DocumentElement      // уровень <farconfig> в файле патча можно опустить
-    else
-      PatchAssoc := PatchDoc.DocumentElement.FindNode('associations');
+  if not Assigned(BaseAssoc) then begin
+    Writeln(StdErr, 'Не найден узел <associations> в базовом файле');  // патч некуда применять
+    Halt(3);
+  end;
 
-    if not Assigned(BaseAssoc) or not Assigned(PatchAssoc) then begin
-      Writeln(StdErr, 'Не найден узел <associations> в одном из файлов');
-      Halt(3);
+  { Обработка каждого filetype из файла-патча }
+  PatchFT := PatchAssoc.FirstChild;
+  while Assigned(PatchFT) do begin
+    if (PatchFT.NodeType = ELEMENT_NODE) and (PatchFT.NodeName = 'filetype') then begin
+      Mask := TDOMElement(PatchFT).GetAttribute('mask');
+      Desc := TDOMElement(PatchFT).GetAttribute('description');
+
+      BaseFT := FindFileType(BaseAssoc, Mask, Desc);
+
+      if BaseFT = nil then begin // Добавляем новый filetype
+        // write log
+        BaseAssoc.AppendChild(BaseDoc.ImportNode(PatchFT, True));
+      end
+      else
+        MergeCommands(TDOMElement(BaseFT), TDOMElement(PatchFT)){ Обновляем существующий: сливаем команды };
     end;
-
-    { Обработка каждого filetype из файла-патча }
-    PatchFT := PatchAssoc.FirstChild;
-    while Assigned(PatchFT) do begin
-      if (PatchFT.NodeType = ELEMENT_NODE) and (PatchFT.NodeName = 'filetype') then begin
-        Mask := TDOMElement(PatchFT).GetAttribute('mask');
-        Desc := TDOMElement(PatchFT).GetAttribute('description');
-
-        BaseFT := FindFileType(BaseAssoc, Mask, Desc);
-
-        if BaseFT = nil then begin // Добавляем новый filetype
-          // write log
-          BaseAssoc.AppendChild(BaseDoc.ImportNode(PatchFT, True));
-        end
-        else
-          MergeCommands(TDOMElement(BaseFT), TDOMElement(PatchFT)){ Обновляем существующий: сливаем команды };
-      end;
-      PatchFT := PatchFT.NextSibling;
-    end;
-
-    WriteXMLFile(BaseDoc, OutputMergedFile);
-  finally
-    BaseDoc.Free;
-    PatchDoc.Free;
+    PatchFT := PatchFT.NextSibling;
   end;
 end;
 

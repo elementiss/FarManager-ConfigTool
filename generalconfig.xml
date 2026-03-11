@@ -1,5 +1,0 @@
-﻿<generalconfig>
-	<setting key="Cmdline" name="AutoComplete" type="qword" value="0000000000000002"/>
-	<setting key="Dialog" name="EditBlock" type="qword" value="0000000000000000"/>
-	<setting key="Viewer" name="Visible0x00" type="qword" value="0000000000000001"/>
-</generalconfig>

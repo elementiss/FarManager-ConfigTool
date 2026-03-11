@@ -13,11 +13,11 @@ interface
 uses
   Classes, SysUtils, DOM, XMLRead, XMLWrite;
 
-procedure MergeGeneral (const BaseFile, PatchFile, OutputMergedFile: string);
+procedure MergeGeneral(const BaseDoc, PatchDoc: TXMLDocument);
 
 implementation
 
-function FindSetting (Root: TDOMNode; const SettingKey, SettingName, SettingType: DOMString): TDOMElement;
+function FindSetting(Root: TDOMNode; const SettingKey, SettingName, SettingType: DOMString): TDOMElement;
 var
   Current: TDOMNode;
 begin
@@ -39,7 +39,7 @@ begin
   end;
 end;
 
-procedure MergeSettings (BaseRoot, PatchRoot: TDOMNode);
+procedure MergeSettings(BaseRoot, PatchRoot: TDOMNode);
 var
   Current: TDOMNode;
   PatchSetting, BaseSetting: TDOMElement;
@@ -78,50 +78,28 @@ begin
   end;
 end;
 
-procedure MergeGeneral (const BaseFile, PatchFile, OutputMergedFile: string);
+procedure MergeGeneral(const BaseDoc, PatchDoc: TXMLDocument);
 var
-  BaseDoc, PatchDoc: TXMLDocument;
   BaseRoot, PatchRoot: TDOMNode;
 begin
-  try
-    ReadXMLFile(BaseDoc, BaseFile);
-    ReadXMLFile(PatchDoc, PatchFile);
-  except
-    on E: Exception do begin
-      Writeln(StdErr, 'Ошибка чтения XML: ', E.Message);
-      Halt(2);
-    end;
+  BaseRoot := BaseDoc.DocumentElement.FindNode('generalconfig');
+  if PatchDoc.DocumentElement.NodeName = 'generalconfig' then
+    PatchRoot := PatchDoc.DocumentElement      // уровень <farconfig> в файле патча можно опустить
+  else
+    PatchRoot := PatchDoc.DocumentElement.FindNode('generalconfig');
+
+  if not Assigned(PatchRoot) then begin
+    //Writeln(StdErr, 'Предупреждение: Не найден узел <generalconfig> в файле-патче');
+    Exit;
   end;
 
-  try
-    BaseRoot := BaseDoc.DocumentElement.FindNode('generalconfig');
-    if PatchDoc.DocumentElement.NodeName = 'generalconfig' then
-      PatchRoot := PatchDoc.DocumentElement      // уровень <farconfig> в файле патча можно опустить
-    else
-      PatchRoot := PatchDoc.DocumentElement.FindNode('generalconfig');
-
-    if not Assigned(PatchRoot) then begin
-      Writeln(StdErr, 'Предупреждение: Не найден узел <generalconfig> в файле-патче');
-      Exit;
-    end;
-
-    if not Assigned(BaseRoot) then begin  // но при этом патч есть - странно
-      Writeln(StdErr, 'Не найден узел <generalconfig> в базовом файле');
-      Halt(3);
-    end;
-
-    // Выполняем слияние: добавляем новые и обновляем существующие настройки
-    MergeSettings(BaseRoot, PatchRoot);
-
-    if OutputMergedFile = '-' then
-      WriteXMLFile(BaseDoc, StdOut)
-    else
-      WriteXMLFile(BaseDoc, OutputMergedFile);
-
-  finally
-    BaseDoc.Free;
-    PatchDoc.Free;
+  if not Assigned(BaseRoot) then begin  // но при этом патч есть - странно
+    Writeln(StdErr, 'Не найден узел <generalconfig> в базовом файле');
+    Halt(3);
   end;
+
+  // Выполняем слияние: добавляем новые и обновляем существующие настройки
+  MergeSettings(BaseRoot, PatchRoot);
 end;
 
 end.
