@@ -1,2 +1,4 @@
-﻿fpc.cmd trunc 3.3.1
+﻿fpc.cmd trunc 3.3.1 64
 configtool.lpi для отладки [fpc 3.2.2 (64)]
+fpc2.cmd fpc 3.2.2
+far_configtool.pas компиляция проекта fpc.cmd far_configtool.pas  или  открыть configtool.lpi в Lazarus IDE  компилируется  в 3.0 + fpc 3.2.2  и в 4.99 + fpc 3.3.1  

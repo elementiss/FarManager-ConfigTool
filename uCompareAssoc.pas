@@ -4,7 +4,7 @@
 {$codepage utf8} 
 
 { Сравнение ассоциаций
-  Пара mask-description уникальным ключом не являтся - технически можно создать две разные ассоциации 
+  Пара mask-description уникальным ключом не является - технически можно создать две разные ассоциации 
   с одинаковыми масками и описанием. Но поскольку такие ассоциации будут показаны как неразличимые пункты меню,
   то в этом нет практического смысла. Поэтому программа считает ключом ассоциации пару mask-description
   
@@ -33,7 +33,7 @@ implementation
 
 const SECTION = 'associations';
 
-function FindFileType (Assoc: TDOMNode; const Mask, Desc: DOMString): TDOMElement;
+function FindFileType(Assoc: TDOMNode; const Mask, Desc: DOMString): TDOMElement;
 var
   Current: TDOMNode;
 begin

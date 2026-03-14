@@ -14,6 +14,7 @@
 data/
 backup/
 lib/
+dist/
 *.exe
 *.dll
 *.bpl
